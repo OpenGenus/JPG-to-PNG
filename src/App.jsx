@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import './App.css'
-import * as Jimp from'jimp'
+
+const fs = require('fs');
+const sharp = require('sharp');
+
 
 function DragDropFile() {
   const [dragActive, setDragActive] = React.useState(false);
@@ -8,7 +11,7 @@ function DragDropFile() {
   const [uploadedFiles, setUploadedFiles] = useState([])
 
   const inputRef = React.useRef(null);
-  
+
   const handleDrag = function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -18,7 +21,7 @@ function DragDropFile() {
       setDragActive(false);
     }
   };
-  
+
   const handleDrop = function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -29,7 +32,7 @@ function DragDropFile() {
       // handleFiles(e.dataTransfer.files);
     }
   };
-  
+
   const handleChange = function(e) {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
@@ -39,35 +42,40 @@ function DragDropFile() {
       // handleFiles(e.target.files);
     }
   };
-  
+
   const onButtonClick = () => {
     inputRef.current.click();
   };
 
-  const convertFiles = () => {
-  for(let i = 0; i < uploadedFiles.length; i++){
-    Jimp.read(uploadedFiles[i], function (err, image){
-      if(err){
-        window.alert(err)
-      }else{
-        image.write(`${uploadedFiles[i].name.split('.')[0]}.png`, () => {
-          const url = URL.createObjectURL(image);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${uploadedFiles[i].name.split('.')[0]}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        });
-      }
-    })
-  }
-}
+  function convertJpgToPng(inputPath, outputPath) {
+    fs.readFile(inputPath, (err, data) => {
+    if (err) throw err;
 
-  
-  
-  
+    sharp(data)
+      .png()
+      .toBuffer((err, pngData) => {
+        if (err) throw err;
+
+        fs.writeFile(outputPath, pngData, (err) => {
+          if (err) throw err;
+          console.log(`Successfully converted ${inputPath} to ${outputPath}`);
+          });
+        });
+    });
+  }
+
+  const convertFiles = (filesArray) => {
+    filesArray.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const inputBuffer = Buffer.from(event.target.result);
+        const outputFilePath = file.path.replace('.jpg', '.png');
+        convertJpgToPng(inputBuffer, outputFilePath);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
   return (
     <form id="form-file-upload" onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
       <input ref={inputRef} type="file" id="input-file-upload" accept="image/jpeg, image/jpg" multiple={true} onChange={handleChange} />
@@ -76,12 +84,12 @@ function DragDropFile() {
           <p>Drag and drop your file here or</p>
           <button className="upload-button" onClick={onButtonClick}>Upload a file</button>
           <p>Quantity of files: {QntFiles}</p>
-        </div> 
+        </div>
       </label>
       { dragActive && <div id="drag-file-element" onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}></div> }
       <button className="convert-button" onClick={convertFiles}>Convert files</button>
     </form>
   );
 };
-  
+
   export default DragDropFile;
