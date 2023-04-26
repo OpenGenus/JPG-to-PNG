@@ -3,7 +3,7 @@
   width: 28rem;
   max-width: 100%;
   text-align: center;
-  position: relative;
+  position: absolute;
 }
 
 #input-file-upload {

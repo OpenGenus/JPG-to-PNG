@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React from "react";
 import './App.css'
 
 const fs = require('fs');
 const sharp = require('sharp');
 
 
-function DragDropFile() {
+function Converter() {
   const [dragActive, setDragActive] = React.useState(false);
   const [QntFiles, setQntFiles] = React.useState(0)
-  const [uploadedFiles, setUploadedFiles] = useState([])
+  const [uploadedFiles, setUploadedFiles] = React.useState([])
 
   const inputRef = React.useRef(null);
 
@@ -29,7 +29,6 @@ function DragDropFile() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const filesArray = Array.from(e.dataTransfer.files);
       setUploadedFiles(prevUploadedFiles => [...prevUploadedFiles, ...filesArray])
-      // handleFiles(e.dataTransfer.files);
     }
   };
 
@@ -37,9 +36,6 @@ function DragDropFile() {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       setQntFiles(QntFiles + 1)
-      const filesArray = Array.from(e.target.files);
-      setUploadedFiles(prevUploadedFiles => [...prevUploadedFiles, ...filesArray])
-      // handleFiles(e.target.files);
     }
   };
 
@@ -47,18 +43,28 @@ function DragDropFile() {
     inputRef.current.click();
   };
 
-  function convertJpgToPng(inputPath, outputPath) {
+  const downloadFile = (filePath, fileName) => {
+    const fileUrl = URL.createObjectURL(new Blob([filePath]));
+    const downloadLink = document.createElement('a');
+    downloadLink.href = fileUrl;
+    downloadLink.setAttribute('download', fileName);
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
+
+  function convertJpgToPng(inputPath, outputPath, callback) {
     fs.readFile(inputPath, (err, data) => {
-    if (err) throw err;
+      if (err) throw err;
 
-    sharp(data)
-      .png()
-      .toBuffer((err, pngData) => {
-        if (err) throw err;
-
-        fs.writeFile(outputPath, pngData, (err) => {
+      sharp(data)
+        .png()
+        .toBuffer((err, pngData) => {
           if (err) throw err;
-          console.log(`Successfully converted ${inputPath} to ${outputPath}`);
+
+          fs.writeFile(outputPath, pngData, (err) => {
+            if (err) throw err;
+            callback(pngData);
           });
         });
     });
@@ -70,7 +76,9 @@ function DragDropFile() {
       reader.onload = (event) => {
         const inputBuffer = Buffer.from(event.target.result);
         const outputFilePath = file.path.replace('.jpg', '.png');
-        convertJpgToPng(inputBuffer, outputFilePath);
+        convertJpgToPng(inputBuffer, outputFilePath, (pngData) => {
+          downloadFile(pngData, outputFilePath.split('/').pop());
+        });
       };
       reader.readAsArrayBuffer(file);
     });
@@ -87,9 +95,9 @@ function DragDropFile() {
         </div>
       </label>
       { dragActive && <div id="drag-file-element" onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}></div> }
-      <button className="convert-button" onClick={convertFiles}>Convert files</button>
+      <button className="convert-button" onClick={convertFiles(uploadedFiles)}>Convert files</button>
     </form>
   );
 };
 
-  export default DragDropFile;
+export default Converter;
